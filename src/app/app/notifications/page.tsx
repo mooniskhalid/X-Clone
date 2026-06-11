@@ -7,6 +7,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { timeAgo } from "@/components/Post";
 import Link from "next/link";
+import { SearchBar } from "@/components/SearchBar";
 
 const typeLabel: Record<string, string> = {
     LIKE: "liked your post",
@@ -51,8 +52,9 @@ export default function NotificationsPage() {
 
     return (
         <div className="min-h-screen text-white w-full">
-            <div className="sticky top-0 bg-black/80 backdrop-blur border-b border-zinc-800 px-4 py-4 z-10">
-                <p className="font-bold text-xl">Notifications</p>
+            <div className="sticky top-0 bg-black/80 backdrop-blur border-b border-zinc-800 px-4 py-3 z-10 flex items-center gap-3">
+                <p className="font-bold text-xl flex-shrink-0">Notifications</p>
+                <SearchBar />
             </div>
 
             {isLoading && (

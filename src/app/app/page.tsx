@@ -6,6 +6,7 @@ import { useQuery as useSessionQuery } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { PostCard, type Post } from "@/components/Post";
 import { FiImage, FiX } from "react-icons/fi";
+import { SearchBar } from "@/components/SearchBar";
 
 // [NY] Konverterer File til base64
 function fileToBase64(file: File): Promise<string> {
@@ -43,21 +44,9 @@ export default function App() {
 
     const createPost = useMutation({
         mutationFn: () => api.createPost(content, image),
-        onSuccess: (newPost: Post) => {
-            // Prepend ny post til begge feed-cacher (infinite query-format)
-            const prepend = (old: any) => {
-                if (!old) return old;
-                if (old.pages)
-                    return {
-                        ...old,
-                        pages: old.pages.map((page: any, i: number) =>
-                            i === 0 ? { ...page, posts: [newPost, ...page.posts] } : page
-                        ),
-                    };
-                return old;
-            };
-            queryClient.setQueryData(["posts", "forYou"], prepend);
-            queryClient.setQueryData(["posts", "following"], (old: any) => (old ? prepend(old) : old));
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["posts"] });
+            queryClient.invalidateQueries({ queryKey: ["userPosts"] });
             setContent("");
             setImage(null);
         },
@@ -77,8 +66,9 @@ export default function App() {
         <div className="min-h-screen text-white w-full">
             {/* Header med tabs */}
             <div className="sticky top-0 z-10 bg-black/80 backdrop-blur border-b border-zinc-800">
-                <div className="px-4 py-3">
-                    <p className="font-bold text-xl">Home</p>
+                <div className="flex items-center gap-3 px-4 py-3">
+                    <p className="font-bold text-xl flex-shrink-0">Home</p>
+                    <SearchBar placeholder="Search" />
                 </div>
                 <div className="flex">
                     <button

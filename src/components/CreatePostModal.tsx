@@ -29,29 +29,21 @@ export function CreatePostModal({ onClose }: { onClose: () => void }) {
 
     useEffect(() => { textareaRef.current?.focus(); }, []);
 
-    // [ENDRET] Escape lukker modalen
+    // [ENDRET] Escape lukker modalen, Ctrl+Enter poster
     useEffect(() => {
-        const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+        const handler = (e: KeyboardEvent) => {
+            if (e.key === "Escape") onClose();
+            if (e.key === "Enter" && !e.shiftKey && content.trim().length > 0) { e.preventDefault(); createPost.mutate(); }
+        };
         document.addEventListener("keydown", handler);
         return () => document.removeEventListener("keydown", handler);
-    }, [onClose]);
+    }, [onClose, content]);
 
     const createPost = useMutation({
         mutationFn: () => api.createPost(content, image),
-        onSuccess: (newPost: Post) => {
-            // Prepend til begge feed-cacher (håndterer infinite query-format)
-            const prepend = (old: any) => {
-                if (!old) return old;
-                if (old.pages)
-                    return { ...old, pages: old.pages.map((page: any, i: number) =>
-                        i === 0 ? { ...page, posts: [newPost, ...page.posts] } : page
-                    )};
-                if (old.posts) return { ...old, posts: [newPost, ...old.posts] };
-                if (Array.isArray(old)) return [newPost, ...old];
-                return old;
-            };
-            queryClient.setQueryData(["posts", "forYou"], prepend);
-            queryClient.setQueryData(["posts", "following"], (old: any) => old ? prepend(old) : old);
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["posts"] });
+            queryClient.invalidateQueries({ queryKey: ["userPosts"] });
             setContent("");
             setImage(null);
             onClose();
@@ -132,7 +124,7 @@ export function CreatePostModal({ onClose }: { onClose: () => void }) {
                                 <button
                                     onClick={() => createPost.mutate()}
                                     disabled={!canPost || createPost.isPending}
-                                    className="bg-sky-500 hover:bg-sky-400 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold px-5 py-1.5 rounded-full text-sm transition"
+                                    className="bg-white text-black font-bold px-5 py-1.5 rounded-full text-sm hover:bg-sky-400 transition-colors duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
                                 >
                                     {createPost.isPending ? "Posting..." : "Post"}
                                 </button>

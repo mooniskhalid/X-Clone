@@ -1,19 +1,26 @@
 "use client";
 
-// [NY] Explore-side med ekte søk på poster og brukere
 import { useQuery } from "@tanstack/react-query";
 import api from "@/lib/axios";
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { FiSearch, FiX } from "react-icons/fi";
 import { PostCard, type Post } from "@/components/Post";
 import Link from "next/link";
 
 export default function ExplorePage() {
-    const [query, setQuery] = useState("");
-    const [debouncedQuery, setDebouncedQuery] = useState("");
+    const searchParams = useSearchParams();
+    const [query, setQuery] = useState(searchParams.get("q") ?? "");
+    const [debouncedQuery, setDebouncedQuery] = useState(searchParams.get("q") ?? "");
     const [activeTab, setActiveTab] = useState<"posts" | "people">("posts");
 
-    // Debounce: vent 300ms etter siste tastetrykk før søk
+    // Sync når URL-param endres (f.eks. fra SearchBar på andre sider)
+    useEffect(() => {
+        const q = searchParams.get("q") ?? "";
+        setQuery(q);
+        setDebouncedQuery(q);
+    }, [searchParams]);
+
     useEffect(() => {
         const t = setTimeout(() => setDebouncedQuery(query.trim()), 300);
         return () => clearTimeout(t);
@@ -31,7 +38,6 @@ export default function ExplorePage() {
 
     return (
         <div className="min-h-screen text-white w-full">
-            {/* Sticky søkefelt */}
             <div className="sticky top-0 bg-black/90 backdrop-blur z-10 px-4 py-3 border-b border-zinc-800">
                 <div className="relative">
                     <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 w-4 h-4" />
@@ -48,8 +54,6 @@ export default function ExplorePage() {
                         </button>
                     )}
                 </div>
-
-                {/* Tabs — kun synlig når det finnes resultater */}
                 {debouncedQuery && (
                     <div className="flex mt-2 -mx-4">
                         <button
@@ -70,7 +74,6 @@ export default function ExplorePage() {
                 )}
             </div>
 
-            {/* Tom tilstand */}
             {!debouncedQuery && (
                 <div className="px-4 py-16 text-center">
                     <FiSearch className="w-10 h-10 text-zinc-700 mx-auto mb-3" />
@@ -79,14 +82,12 @@ export default function ExplorePage() {
                 </div>
             )}
 
-            {/* Laster */}
             {results.isLoading && (
                 <div className="flex justify-center py-12">
                     <div className="w-6 h-6 border-2 border-sky-500 border-t-transparent rounded-full animate-spin" />
                 </div>
             )}
 
-            {/* Ingen treff */}
             {results.isSuccess && !hasPosts && !hasUsers && (
                 <div className="px-4 py-16 text-center">
                     <p className="text-zinc-400 font-bold text-lg">No results for "{debouncedQuery}"</p>
@@ -94,16 +95,10 @@ export default function ExplorePage() {
                 </div>
             )}
 
-            {/* Posts-tab */}
-            {results.isSuccess && activeTab === "posts" && hasPosts && (
+            {results.isSuccess && activeTab === "posts" && hasPosts &&
                 results.data!.posts.map((post: Post) => <PostCard key={post.id} post={post} />)
-            )}
+            }
 
-            {results.isSuccess && activeTab === "posts" && debouncedQuery && !hasPosts && !results.isLoading && (
-                <div className="px-4 py-10 text-center text-zinc-500 text-sm">No posts matching "{debouncedQuery}".</div>
-            )}
-
-            {/* People-tab */}
             {results.isSuccess && activeTab === "people" && hasUsers && results.data!.users.map((user: any) => (
                 <Link
                     key={user.id}
@@ -119,10 +114,6 @@ export default function ExplorePage() {
                     </div>
                 </Link>
             ))}
-
-            {results.isSuccess && activeTab === "people" && debouncedQuery && !hasUsers && !results.isLoading && (
-                <div className="px-4 py-10 text-center text-zinc-500 text-sm">No people matching "{debouncedQuery}".</div>
-            )}
         </div>
     );
 }

@@ -1,7 +1,6 @@
 "use client";
 import { GoHomeFill } from "react-icons/go";
-import { FiSearch, FiBell, FiUserPlus, FiMessageSquare, FiBookmark, FiUser, FiLogOut } from "react-icons/fi";
-import { GoKebabHorizontal } from "react-icons/go";
+import { FiSearch, FiBell, FiUserPlus, FiUser, FiLogOut } from "react-icons/fi";
 import { FaXTwitter } from "react-icons/fa6";
 import Link from "next/link";
 import { signOut } from "next-auth/react";
@@ -57,16 +56,6 @@ export default function Navigation() {
                 <span>Follows</span>
             </Link>
 
-            <Link href="/app/chat" className="flex items-center gap-3 text-lg font-semibold hover:bg-zinc-800 rounded-full px-4 py-3 transition-colors duration-200 w-fit">
-                <FiMessageSquare className="w-7 h-7 flex-shrink-0"/>
-                <span>Chat</span>
-            </Link>
-
-            <Link href="/app/bookmarks" className="flex items-center gap-3 text-lg font-semibold hover:bg-zinc-800 rounded-full px-4 py-3 transition-colors duration-200 w-fit">
-                <FiBookmark className="w-7 h-7 flex-shrink-0"/>
-                <span>Bookmarks</span>
-            </Link>
-
             <Link href="/app/premium" className="flex items-center gap-3 text-lg font-semibold hover:bg-zinc-800 rounded-full px-4 py-3 transition-colors duration-200 w-fit">
                 <FaXTwitter className="w-7 h-7 flex-shrink-0" />
                 <span>Premium</span>
@@ -75,11 +64,6 @@ export default function Navigation() {
             <Link href={profileHref} className="flex items-center gap-3 text-lg font-semibold hover:bg-zinc-800 rounded-full px-4 py-3 transition-colors duration-200 w-fit">
                 <FiUser className="w-7 h-7 flex-shrink-0" />
                 <span>Profile</span>
-            </Link>
-
-            <Link href="/app/more" className="flex items-center gap-3 text-lg font-semibold hover:bg-zinc-800 rounded-full px-4 py-3 transition-colors duration-200 w-fit">
-                <GoKebabHorizontal className="w-7 h-7 flex-shrink-0"/>
-                <span>More</span>
             </Link>
 
             <button

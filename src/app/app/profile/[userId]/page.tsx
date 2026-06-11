@@ -1,52 +1,83 @@
 "use client";
 import { useMutation, useQuery, useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
 import api from "@/lib/axios";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { redirect } from "next/navigation";
 import { useState } from "react";
 import { FiArrowLeft } from "react-icons/fi";
-import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { PostCard, type Post } from "@/components/Post";
 import Link from "next/link";
 import { EditProfileModal } from "@/components/EditProfileModal";
+import { FaXTwitter } from "react-icons/fa6";
+
+const TABS = ["Posts", "Likes", "Media", "Highlights", "Articles"] as const;
+type Tab = typeof TABS[number];
+
+function PremiumGate({ feature }: { feature: string }) {
+    return (
+        <div className="flex flex-col items-center px-6 py-16 text-center gap-4">
+            <FaXTwitter className="w-10 h-10 fill-white" />
+            <p className="font-black text-2xl">{feature} on X</p>
+            <p className="text-zinc-400 text-sm max-w-xs">
+                You must be subscribed to Premium to {feature === "Highlight posts" ? "highlight posts on your profile" : "write Articles on X"}.
+            </p>
+            <Link
+                href="/app/premium"
+                className="mt-1 bg-white text-black font-bold px-6 py-2.5 rounded-full hover:bg-sky-400 transition-colors duration-200 text-sm"
+            >
+                Subscribe to Premium
+            </Link>
+        </div>
+    );
+}
 
 export default function Profile() {
     const { data: session } = useSession();
     const params = useParams();
     const router = useRouter();
-    const [activeTab, setActiveTab] = useState("Posts");
+    const [activeTab, setActiveTab] = useState<Tab>("Posts");
     const [showEditModal, setShowEditModal] = useState(false);
     const queryClient = useQueryClient();
+    const userId = params.userId as string;
 
     const user = useQuery({
-        queryKey: ["user", params.userId],
-        queryFn: () => api.getUser(params.userId as string),
+        queryKey: ["user", userId],
+        queryFn: () => api.getUser(userId),
     });
 
-    // [ENDRET] Bruker infinite query for profil-poster også
     const postsQuery = useInfiniteQuery({
-        queryKey: ["userPosts", params.userId],
-        queryFn: ({ pageParam }) => api.getUserPosts(params.userId as string, pageParam as string | undefined),
+        queryKey: ["userPosts", userId],
+        queryFn: ({ pageParam }) => api.getUserPosts(userId, pageParam as string | undefined),
         initialPageParam: undefined as string | undefined,
         getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
         enabled: activeTab === "Posts",
     });
 
+    const likesQuery = useQuery({
+        queryKey: ["likedPosts", userId],
+        queryFn: () => api.getLikedPosts(userId),
+        enabled: activeTab === "Likes",
+    });
+
+    const mediaQuery = useQuery({
+        queryKey: ["mediaPosts", userId],
+        queryFn: () => api.getMediaPosts(userId),
+        enabled: activeTab === "Media",
+    });
+
     const allPosts = postsQuery.data?.pages.flatMap((p) => p.posts) ?? [];
-    const totalPostCount = allPosts.length;
 
     const followUser = useMutation({
-        mutationFn: () => api.followUser(params.userId as string),
+        mutationFn: () => api.followUser(userId),
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["user", params.userId] });
+            queryClient.invalidateQueries({ queryKey: ["user", userId] });
             queryClient.invalidateQueries({ queryKey: ["whoToFollow"] });
         },
     });
 
     if (user.isError) return redirect("/app");
 
-    const tabs = ["Posts", "Replies", "Highlights", "Articles", "Media"];
     const joinedDate = user.data?.createdAt
         ? new Date(user.data.createdAt).toLocaleDateString("en-US", { month: "long", year: "numeric" })
         : null;
@@ -60,7 +91,7 @@ export default function Profile() {
                 </button>
                 <div>
                     <p className="font-bold text-lg leading-tight">{user.data?.name ?? "Profile"}</p>
-                    <p className="text-sm text-zinc-500">{totalPostCount} posts</p>
+                    <p className="text-sm text-zinc-500">{allPosts.length} posts</p>
                 </div>
             </div>
 
@@ -76,11 +107,10 @@ export default function Profile() {
                         ? <img src={user.data.image} alt="avatar" className="w-full h-full object-cover" />
                         : <div className="w-full h-full bg-zinc-600" />}
                 </div>
-
                 {user.data?.email === session?.user?.email ? (
                     <button
                         onClick={() => setShowEditModal(true)}
-                        className="mt-20 px-5 py-1.5 rounded-full border border-zinc-600 font-semibold bg-white text-black hover:bg-zinc-200 transition"
+                        className="mt-20 px-5 py-1.5 rounded-full font-bold bg-white text-black hover:bg-sky-400 transition-colors duration-200"
                     >
                         Edit Profile
                     </button>
@@ -88,7 +118,7 @@ export default function Profile() {
                     <button
                         onClick={() => followUser.mutate()}
                         disabled={followUser.isPending}
-                        className="mt-20 px-5 py-1.5 rounded-full border border-zinc-600 font-semibold bg-white text-black hover:bg-zinc-200 transition disabled:opacity-50"
+                        className="mt-20 px-5 py-1.5 rounded-full font-bold bg-white text-black hover:bg-sky-400 transition-colors duration-200 disabled:opacity-50"
                     >
                         {followUser.isPending ? "..." : user.data?.isFollowing ? "Unfollow" : "Follow"}
                     </button>
@@ -101,10 +131,8 @@ export default function Profile() {
                 <p className="text-zinc-500 text-sm">@{user.data?.email?.toLowerCase().replace(/\s+/g, "") ?? "—"}</p>
             </div>
 
-            {/* Bio */}
             {user.data?.bio && <div className="px-4 mb-3"><p className="text-zinc-300">{user.data.bio}</p></div>}
 
-            {/* Joined */}
             {joinedDate && (
                 <div className="px-4 mb-3 flex items-center gap-1 text-zinc-500 text-sm">
                     <span>🗓</span><span>Joined {joinedDate}</span>
@@ -113,21 +141,23 @@ export default function Profile() {
 
             {/* Followers/Following */}
             <div className="px-4 mb-4 flex gap-5 text-sm">
-                <Link href={`/app/profile/${params.userId}/following`} className="hover:underline">
+                <Link href={`/app/profile/${userId}/following`} className="hover:underline">
                     <span className="font-bold text-white">{user.data?.followingCount ?? 0}</span>
                     <span className="text-zinc-500"> Following</span>
                 </Link>
-                <Link href={`/app/profile/${params.userId}/followers`} className="hover:underline">
+                <Link href={`/app/profile/${userId}/followers`} className="hover:underline">
                     <span className="font-bold text-white">{user.data?.followerCount ?? 0}</span>
                     <span className="text-zinc-500"> Followers</span>
                 </Link>
             </div>
 
             {/* Tabs */}
-            <div className="flex border-b border-zinc-800">
-                {tabs.map((tab) => (
-                    <button key={tab} onClick={() => setActiveTab(tab)}
-                        className={`flex-1 py-3 text-sm font-medium transition relative ${activeTab === tab ? "text-white" : "text-zinc-500 hover:text-zinc-300"}`}
+            <div className="flex border-b border-zinc-800 overflow-x-auto">
+                {TABS.map((tab) => (
+                    <button
+                        key={tab}
+                        onClick={() => setActiveTab(tab)}
+                        className={`flex-1 min-w-fit px-3 py-3 text-sm font-medium transition relative whitespace-nowrap ${activeTab === tab ? "text-white" : "text-zinc-500 hover:text-zinc-300"}`}
                     >
                         {tab}
                         {activeTab === tab && <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-12 h-1 bg-sky-500 rounded-full" />}
@@ -135,8 +165,8 @@ export default function Profile() {
                 ))}
             </div>
 
-            {/* Tab content */}
-            {activeTab === "Posts" ? (
+            {/* ── Posts ── */}
+            {activeTab === "Posts" && (
                 postsQuery.isLoading ? (
                     <div className="flex justify-center py-12">
                         <div className="w-6 h-6 border-2 border-sky-500 border-t-transparent rounded-full animate-spin" />
@@ -145,7 +175,7 @@ export default function Profile() {
                     <div className="px-4 py-10 text-center text-zinc-500 text-sm">No posts yet.</div>
                 ) : (
                     <>
-                        {allPosts.map((post: Post) => <PostCard key={post.id} post={post} />)}
+                        {allPosts.map((post: Post) => <PostCard key={`${post.id}-${post.repostedBy?.id ?? "own"}`} post={post} />)}
                         {postsQuery.hasNextPage && (
                             <div className="flex justify-center py-6">
                                 <button
@@ -159,9 +189,47 @@ export default function Profile() {
                         )}
                     </>
                 )
-            ) : (
-                <div className="px-4 py-10 text-center text-zinc-500 text-sm">No {activeTab.toLowerCase()} yet.</div>
             )}
+
+            {/* ── Likes ── */}
+            {activeTab === "Likes" && (
+                likesQuery.isLoading ? (
+                    <div className="flex justify-center py-12">
+                        <div className="w-6 h-6 border-2 border-sky-500 border-t-transparent rounded-full animate-spin" />
+                    </div>
+                ) : (likesQuery.data?.length ?? 0) === 0 ? (
+                    <div className="px-4 py-10 text-center text-zinc-500 text-sm">No liked posts yet.</div>
+                ) : (
+                    likesQuery.data!.map((post: Post) => <PostCard key={post.id} post={post} />)
+                )
+            )}
+
+            {/* ── Media ── */}
+            {activeTab === "Media" && (
+                mediaQuery.isLoading ? (
+                    <div className="flex justify-center py-12">
+                        <div className="w-6 h-6 border-2 border-sky-500 border-t-transparent rounded-full animate-spin" />
+                    </div>
+                ) : (mediaQuery.data?.length ?? 0) === 0 ? (
+                    <div className="px-4 py-10 text-center text-zinc-500 text-sm">No media yet.</div>
+                ) : (
+                    <div className="grid grid-cols-3 gap-0.5 mt-0.5">
+                        {mediaQuery.data!.map((post: Post) => (
+                            <Link key={post.id} href={`/app/post/${post.id}`}>
+                                <div className="aspect-square overflow-hidden bg-zinc-800">
+                                    <img src={post.image!} alt="" className="w-full h-full object-cover hover:opacity-80 transition" />
+                                </div>
+                            </Link>
+                        ))}
+                    </div>
+                )
+            )}
+
+            {/* ── Highlights ── */}
+            {activeTab === "Highlights" && <PremiumGate feature="Highlight posts" />}
+
+            {/* ── Articles ── */}
+            {activeTab === "Articles" && <PremiumGate feature="Write Articles" />}
 
             {showEditModal && user.isSuccess && (
                 <EditProfileModal
@@ -175,7 +243,7 @@ export default function Profile() {
                     }}
                     onClose={() => {
                         setShowEditModal(false);
-                        queryClient.invalidateQueries({ queryKey: ["user", params.userId] });
+                        queryClient.invalidateQueries({ queryKey: ["user", userId] });
                     }}
                 />
             )}

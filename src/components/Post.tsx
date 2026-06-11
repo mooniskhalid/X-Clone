@@ -4,14 +4,27 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/axios";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { FiMessageCircle, FiRepeat, FiHeart, FiShare, FiMoreHorizontal, FiImage, FiX } from "react-icons/fi";
+import { FiMessageCircle, FiRepeat, FiHeart, FiShare, FiMoreHorizontal, FiX } from "react-icons/fi";
 import { FaHeart, FaRetweet } from "react-icons/fa";
 import { ReplyModal } from "@/components/ReplyModal";
+import { QuoteModal } from "@/components/QuoteModal";
+
+export type QuotedPost = {
+    id: string;
+    content: string;
+    image?: string | null;
+    createdAt: string;
+    author: {
+        id: string;
+        name: string | null;
+        email: string | null;
+        image: string | null;
+    };
+};
 
 export type Post = {
     id: string;
     content: string;
-    // [NY] Valgfritt bilde lagret som base64-streng
     image?: string | null;
     createdAt: string;
     author: {
@@ -25,6 +38,8 @@ export type Post = {
     commentCount: number;
     isLiked: boolean;
     isReposted: boolean;
+    quotedPost?: QuotedPost | null;
+    repostedBy?: { id: string; name: string | null; email: string | null } | null;
 };
 
 export type Comment = {
@@ -79,15 +94,27 @@ export function PostCard({ post, disableClick }: { post: Post; disableClick?: bo
     const queryClient = useQueryClient();
     const router = useRouter();
     const [showReplyModal, setShowReplyModal] = useState(false);
+    const [showQuoteModal, setShowQuoteModal] = useState(false);
+    const [showRepostMenu, setShowRepostMenu] = useState(false);
     const [showMenu, setShowMenu] = useState(false);
+    const repostMenuRef = useRef<HTMLDivElement>(null);
     const [isEditing, setIsEditing] = useState(false);
     const [editContent, setEditContent] = useState(post.content);
     const menuRef = useRef<HTMLDivElement>(null);
 
+    const [copied, setCopied] = useState(false);
     const currentUser = useQuery({ queryKey: ["currentUser"], queryFn: api.getCurrentUser });
     const isOwner = currentUser.isSuccess && currentUser.data.id === post.author.id;
 
-    // Lukk meny ved klikk utenfor
+    function handleShare() {
+        const url = `${window.location.origin}/app/post/${post.id}`;
+        navigator.clipboard.writeText(url).then(() => {
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        });
+    }
+
+    // Lukk menyer ved klikk utenfor
     useEffect(() => {
         if (!showMenu) return;
         const handler = (e: MouseEvent) => {
@@ -96,6 +123,15 @@ export function PostCard({ post, disableClick }: { post: Post; disableClick?: bo
         document.addEventListener("mousedown", handler);
         return () => document.removeEventListener("mousedown", handler);
     }, [showMenu]);
+
+    useEffect(() => {
+        if (!showRepostMenu) return;
+        const handler = (e: MouseEvent) => {
+            if (repostMenuRef.current && !repostMenuRef.current.contains(e.target as Node)) setShowRepostMenu(false);
+        };
+        document.addEventListener("mousedown", handler);
+        return () => document.removeEventListener("mousedown", handler);
+    }, [showRepostMenu]);
 
     // Like — optimistisk oppdatering
     const likePost = useMutation({
@@ -127,6 +163,11 @@ export function PostCard({ post, disableClick }: { post: Post; disableClick?: bo
         onError: (_e, _v, ctx) => {
             ctx?.prev?.forEach(([key, data]) => queryClient.setQueryData(key, data));
         },
+        onSuccess: () => {
+            // [NY] Invalider feed så repost-item dukker opp / forsvinner med en gang
+            queryClient.invalidateQueries({ queryKey: ["posts"] });
+            queryClient.invalidateQueries({ queryKey: ["userPosts"] });
+        },
     });
 
     // Slett post
@@ -151,9 +192,17 @@ export function PostCard({ post, disableClick }: { post: Post; disableClick?: bo
     return (
         <>
         <article
-            className={`flex gap-3 px-4 py-3 border-b border-zinc-800 transition ${disableClick ? "" : "hover:bg-zinc-900/50 cursor-pointer"}`}
+            className={`flex flex-col border-b border-zinc-800 transition ${disableClick ? "" : "hover:bg-zinc-900/50 cursor-pointer"}`}
             onClick={disableClick ? undefined : () => router.push(`/app/post/${post.id}`)}
         >
+            {/* Repost-label */}
+            {post.repostedBy && (
+                <div className="flex items-center gap-1.5 px-4 pt-2 text-zinc-500 text-xs" onClick={(e) => { e.stopPropagation(); router.push(`/app/profile/${post.repostedBy!.id}`); }}>
+                    <FaRetweet className="w-3.5 h-3.5" />
+                    <span className="hover:underline cursor-pointer font-medium">{post.repostedBy.name ?? post.repostedBy.email ?? "Someone"} reposted</span>
+                </div>
+            )}
+            <div className="flex gap-3 px-4 py-3">
             {/* Avatar */}
             <div
                 className="w-10 h-10 rounded-full bg-zinc-700 flex-shrink-0 overflow-hidden mt-0.5 cursor-pointer"
@@ -216,10 +265,30 @@ export function PostCard({ post, disableClick }: { post: Post; disableClick?: bo
                     <p className="text-white text-sm mt-0.5 whitespace-pre-wrap break-words leading-relaxed">{post.content}</p>
                 )}
 
-                {/* [NY] Bilde i post */}
+                {/* Bilde i post */}
                 {post.image && !isEditing && (
                     <div className="mt-2 rounded-2xl overflow-hidden border border-zinc-800" onClick={(e) => e.stopPropagation()}>
                         <img src={post.image} alt="Post image" className="w-full object-cover max-h-[400px]" />
+                    </div>
+                )}
+
+                {/* Sitert post (quote repost) */}
+                {post.quotedPost && !isEditing && (
+                    <div
+                        className="mt-2 border border-zinc-700 rounded-2xl px-3 py-2 hover:bg-zinc-800/50 transition cursor-pointer"
+                        onClick={(e) => { e.stopPropagation(); }}
+                    >
+                        <div className="flex items-center gap-1.5 mb-1">
+                            <div className="w-5 h-5 rounded-full bg-zinc-600 overflow-hidden flex-shrink-0">
+                                {post.quotedPost.author.image && <img src={post.quotedPost.author.image} alt="" className="w-full h-full object-cover" />}
+                            </div>
+                            <span className="font-bold text-white text-xs">{post.quotedPost.author.name ?? "Unknown"}</span>
+                            <span className="text-zinc-500 text-xs">@{post.quotedPost.author.email?.toLowerCase().replace(/\s+/g, "") ?? "unknown"}</span>
+                        </div>
+                        <p className="text-white text-sm leading-relaxed line-clamp-3">{post.quotedPost.content}</p>
+                        {post.quotedPost.image && (
+                            <img src={post.quotedPost.image} alt="" className="mt-1.5 w-full rounded-xl object-cover max-h-[150px]" />
+                        )}
                     </div>
                 )}
 
@@ -230,13 +299,36 @@ export function PostCard({ post, disableClick }: { post: Post; disableClick?: bo
                         {post.commentCount > 0 && <span>{post.commentCount}</span>}
                     </button>
 
-                    {/* [ENDRET] Repost — nå funksjonell med optimistisk oppdatering */}
-                    <button onClick={() => repostPost.mutate()} className={`flex items-center gap-1 group transition text-sm ${post.isReposted ? "text-green-400" : "hover:text-green-400"}`}>
-                        <span className="p-1.5 rounded-full group-hover:bg-green-400/10 transition">
-                            {post.isReposted ? <FaRetweet className="w-[18px] h-[18px]" /> : <FiRepeat className="w-[18px] h-[18px]" />}
-                        </span>
-                        {post.repostCount > 0 && <span>{post.repostCount}</span>}
-                    </button>
+                    {/* Repost dropdown: vanlig repost eller quote */}
+                    <div className="relative" ref={repostMenuRef}>
+                        <button
+                            onClick={() => setShowRepostMenu(!showRepostMenu)}
+                            className={`flex items-center gap-1 group transition text-sm ${post.isReposted ? "text-green-400" : "hover:text-green-400"}`}
+                        >
+                            <span className="p-1.5 rounded-full group-hover:bg-green-400/10 transition">
+                                {post.isReposted ? <FaRetweet className="w-[18px] h-[18px]" /> : <FiRepeat className="w-[18px] h-[18px]" />}
+                            </span>
+                            {post.repostCount > 0 && <span>{post.repostCount}</span>}
+                        </button>
+                        {showRepostMenu && (
+                            <div className="absolute bottom-8 left-0 bg-zinc-900 border border-zinc-700 rounded-xl shadow-lg overflow-hidden z-20 min-w-[140px]">
+                                <button
+                                    onClick={() => { repostPost.mutate(); setShowRepostMenu(false); }}
+                                    className="w-full px-4 py-3 text-left text-sm hover:bg-zinc-800 transition text-white flex items-center gap-2"
+                                >
+                                    <FiRepeat className="w-4 h-4" />
+                                    {post.isReposted ? "Undo repost" : "Repost"}
+                                </button>
+                                <button
+                                    onClick={() => { setShowQuoteModal(true); setShowRepostMenu(false); }}
+                                    className="w-full px-4 py-3 text-left text-sm hover:bg-zinc-800 transition text-white flex items-center gap-2"
+                                >
+                                    <FiMessageCircle className="w-4 h-4" />
+                                    Quote
+                                </button>
+                            </div>
+                        )}
+                    </div>
 
                     <button onClick={() => likePost.mutate()} className={`flex items-center gap-1 group transition text-sm ${post.isLiked ? "text-pink-500" : "hover:text-pink-500"}`}>
                         <span className="p-1.5 rounded-full group-hover:bg-pink-500/10 transition">
@@ -245,14 +337,19 @@ export function PostCard({ post, disableClick }: { post: Post; disableClick?: bo
                         {post.likeCount > 0 && <span>{post.likeCount}</span>}
                     </button>
 
-                    <button className="flex items-center gap-1 group hover:text-sky-400 transition text-sm">
-                        <span className="p-1.5 rounded-full group-hover:bg-sky-400/10 transition"><FiShare className="w-[18px] h-[18px]" /></span>
+                    <button onClick={handleShare} className={`flex items-center gap-1 group transition text-sm ${copied ? "text-green-400" : "hover:text-sky-400"}`}>
+                        <span className="p-1.5 rounded-full group-hover:bg-sky-400/10 transition">
+                            <FiShare className="w-[18px] h-[18px]" />
+                        </span>
+                        {copied && <span className="text-xs">Copied!</span>}
                     </button>
                 </div>
+            </div>
             </div>
         </article>
 
         {showReplyModal && <ReplyModal post={post} onClose={() => setShowReplyModal(false)} />}
+        {showQuoteModal && <QuoteModal post={post} onClose={() => setShowQuoteModal(false)} />}
         </>
     );
 }

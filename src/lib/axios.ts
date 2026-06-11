@@ -35,6 +35,11 @@ const api = {
         const { data } = await axios.post(`/api/repost/${postId}`);
         return data;
     },
+    // [NY] Quote repost
+    quotePost: async (postId: string, content: string) => {
+        const { data } = await axios.post(`/api/quote-post/${postId}`, { content });
+        return data;
+    },
     getUserPosts: async (userId: string, cursor?: string) => {
         const params: Record<string, string> = {};
         if (cursor) params.cursor = cursor;
@@ -71,6 +76,14 @@ const api = {
     editComment: async (commentId: string, content: string) => {
         const { data } = await axios.patch(`/api/edit-comment/${commentId}`, { content });
         return data;
+    },
+    getLikedPosts: async (userId: string) => {
+        const { data } = await axios.get(`/api/get-liked-posts/${userId}`);
+        return data as any[];
+    },
+    getMediaPosts: async (userId: string) => {
+        const { data } = await axios.get(`/api/get-media-posts/${userId}`);
+        return data as any[];
     },
     getFollowers: async (userId: string) => {
         const { data } = await axios.get(`/api/get-followers/${userId}`);

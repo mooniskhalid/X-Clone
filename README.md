@@ -1,36 +1,154 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# X Clone
+
+A full-stack Twitter/X clone built with Next.js 16, React 19, and PostgreSQL. Supports posts, reposts, quote reposts, comments, likes, follows, notifications, image uploads, and real-time search — all with a responsive mobile-first design.
+
+![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)
+![React](https://img.shields.io/badge/React-19-61DAFB?logo=react)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript)
+![Prisma](https://img.shields.io/badge/Prisma-7-2D3748?logo=prisma)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Neon-4169E1?logo=postgresql)
+
+---
+
+## Features
+
+- **Authentication** — GitHub OAuth via NextAuth v4, database sessions
+- **Posts** — Create, edit, delete posts with optional image uploads (base64)
+- **Reposts & Quotes** — Repost any post, or quote it with your own comment
+- **Comments** — Reply to posts with a full comment thread
+- **Likes** — Like/unlike posts with optimistic UI updates
+- **Follows** — Follow/unfollow users, dedicated following feed
+- **Notifications** — Real-time badge for likes, follows, and replies
+- **Explore** — Full-text search across posts and users
+- **Profiles** — Posts, Likes, Media, Highlights, Articles tabs
+- **Responsive** — Desktop sidebar navigation + mobile bottom bar
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Framework | Next.js 16 (App Router) |
+| UI | React 19, Tailwind CSS 4 |
+| Database | PostgreSQL (Neon) |
+| ORM | Prisma 7 with `@prisma/adapter-pg` |
+| Auth | NextAuth v4 + GitHub provider |
+| Data fetching | TanStack React Query v5 |
+| HTTP client | Axios |
+| Icons | React Icons |
+
+---
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+
+- Node.js 18+
+- A [Neon](https://neon.tech) PostgreSQL database (free tier works)
+- A GitHub OAuth App ([create one here](https://github.com/settings/developers))
+
+### Installation
+
+```bash
+git clone https://github.com/mooniskhalid/x-clone.git
+cd x-clone
+npm install
+```
+
+### Environment Variables
+
+Create a `.env` file in the root:
+
+```env
+DATABASE_URL="postgresql://..."
+
+GITHUB_ID="your_github_client_id"
+GITHUB_SECRET="your_github_client_secret"
+
+NEXTAUTH_SECRET="any_random_string"
+NEXTAUTH_URL="http://localhost:3000"
+```
+
+### Database Setup
+
+```bash
+npx prisma migrate dev
+```
+
+### Run Locally
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Project Structure
 
-## Learn More
+```
+src/
+├── app/
+│   ├── api/              # REST API routes (Next.js Route Handlers)
+│   │   ├── auth/         # NextAuth
+│   │   ├── create-post/
+│   │   ├── get-posts/    # Feed with cursor-based pagination
+│   │   ├── repost/
+│   │   ├── quote-post/
+│   │   ├── like-post/
+│   │   ├── comment-post/
+│   │   ├── follow-user/
+│   │   ├── search/
+│   │   ├── get-notifications/
+│   │   └── ...
+│   └── app/              # UI pages
+│       ├── page.tsx      # Home feed (For You / Following)
+│       ├── explore/      # Search
+│       ├── follows/      # Following feed
+│       ├── notifications/
+│       ├── post/[postId]/
+│       └── profile/[userId]/
+├── components/
+│   ├── Post.tsx          # PostCard + all post interactions
+│   ├── Navigation.tsx    # Desktop sidebar + mobile bottom bar
+│   ├── CreatePostModal.tsx
+│   ├── ReplyModal.tsx
+│   ├── QuoteModal.tsx
+│   ├── EditProfileModal.tsx
+│   ├── SearchBar.tsx
+│   └── RightSidebar.tsx  # Who to Follow + Trending
+├── lib/
+│   ├── prisma.ts         # Prisma singleton with PrismaPg adapter
+│   └── axios.ts          # Typed API client
+└── generated/
+    └── prisma/           # Generated Prisma client
+```
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Deployment
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+This project is deployed on **Vercel** with a **Neon** PostgreSQL database.
 
-## Deploy on Vercel
+1. Push to GitHub
+2. Import the repo on [vercel.com](https://vercel.com)
+3. Add the environment variables from `.env`
+4. Deploy
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Vercel auto-detects Next.js — no extra configuration needed.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+## Database Schema
+
+Core models: `User`, `Post`, `Comment`, `Like`, `Repost`, `Follow`, `Notification`
+
+Posts support self-referential quote reposts via `quotedPostId`. The feed uses timestamp-based cursor pagination to correctly merge original posts and reposts in chronological order.
+
+---
+
+## License
+
+MIT

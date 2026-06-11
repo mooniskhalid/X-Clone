@@ -187,6 +187,9 @@ export default function PostDetail() {
                                     e.target.style.height = "auto";
                                     e.target.style.height = e.target.scrollHeight + "px";
                                 }}
+                                onKeyDown={(e) => {
+                                    if (e.key === "Enter" && !e.shiftKey && canReply) { e.preventDefault(); createComment.mutate(); }
+                                }}
                                 placeholder="Post your reply"
                                 rows={1}
                                 className="w-full bg-transparent text-white text-base placeholder-zinc-500 resize-none outline-none leading-relaxed"
@@ -200,7 +203,7 @@ export default function PostDetail() {
                                 <button
                                     onClick={() => createComment.mutate()}
                                     disabled={!canReply || createComment.isPending}
-                                    className="bg-sky-500 hover:bg-sky-400 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold px-5 py-1.5 rounded-full text-sm transition"
+                                    className="bg-white text-black font-bold px-5 py-1.5 rounded-full text-sm hover:bg-sky-400 transition-colors duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
                                 >
                                     {createComment.isPending ? "Replying..." : "Reply"}
                                 </button>

@@ -9,26 +9,19 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     if (!session) return redirect("/");
 
     return (
-        <div className="min-h-screen">
-            {/* Desktop layout: spacer + content + sidebar */}
-            <div className="hidden md:grid md:grid-cols-[300px_1fr_350px] min-h-screen">
-                {/* Spacer for fixed nav (300px wide) */}
-                <div />
-                <div className="border-x border-zinc-900">
-                    {children}
-                </div>
-                <div className="hidden lg:flex flex-col p-4 sticky top-0 h-screen overflow-y-auto">
-                    <RightSidebar />
-                </div>
-            </div>
-
-            {/* Mobile layout: full width, padded bottom for nav bar */}
-            <div className="md:hidden pb-16">
+        <>
+            {/* Content: full width on mobile, offset for nav+sidebar on desktop */}
+            <div className="md:ml-[300px] lg:mr-[350px] border-x border-zinc-900 min-h-screen pb-16 md:pb-0">
                 {children}
             </div>
 
-            {/* Navigation handles its own desktop/mobile rendering */}
+            {/* Right sidebar: fixed on desktop */}
+            <div className="hidden lg:flex flex-col fixed right-0 top-0 w-[350px] h-screen overflow-y-auto p-4">
+                <RightSidebar />
+            </div>
+
+            {/* Navigation handles desktop sidebar + mobile bottom bar */}
             <Navigation />
-        </div>
+        </>
     );
 }

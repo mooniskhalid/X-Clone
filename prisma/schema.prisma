@@ -92,13 +92,16 @@ model Authenticator {
 model Post {
   id        String   @id @default(cuid())
   content   String
-  // [NY] Valgfritt bilde lagret som base64-streng
   image     String?
   authorId  String
+  // Quote repost: referanse til sitert post
+  quotedPostId String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   author        User           @relation("posts", fields: [authorId], references: [id], onDelete: Cascade)
+  quotedPost    Post?          @relation("quotes", fields: [quotedPostId], references: [id], onDelete: SetNull)
+  quotes        Post[]         @relation("quotes")
   likes         Like[]
   reposts       Repost[]
   comments      Comment[]
@@ -131,9 +134,10 @@ model Like {
 }
 
 model Repost {
-  id     String @id @default(cuid())
-  postId String
-  userId String
+  id        String   @id @default(cuid())
+  postId    String
+  userId    String
+  createdAt DateTime @default(now())
 
   post   Post @relation(fields: [postId], references: [id], onDelete: Cascade)
   user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
