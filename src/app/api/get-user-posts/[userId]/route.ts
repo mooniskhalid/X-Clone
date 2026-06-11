@@ -10,6 +10,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     const currentUser = await prisma.user.findUnique({ where: { email: session.user?.email ?? "" } });
     if (!currentUser) return NextResponse.json({ error: "User not found" }, { status: 404 });
+    const currentUserId = currentUser.id;
 
     const { searchParams } = request.nextUrl;
     const cursor = searchParams.get("cursor"); // ISO timestamp
@@ -61,8 +62,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
             likeCount: post.likes.length,
             repostCount: post.reposts.length,
             commentCount: post._count.comments,
-            isLiked: post.likes.some((l: any) => l.userId === currentUser.id),
-            isReposted: post.reposts.some((r: any) => r.userId === currentUser.id),
+            isLiked: post.likes.some((l: any) => l.userId === currentUserId),
+            isReposted: post.reposts.some((r: any) => r.userId === currentUserId),
             quotedPost: post.quotedPost ?? null,
             repostedBy: repostedBy ?? null,
         };
