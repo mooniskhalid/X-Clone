@@ -1,12 +1,12 @@
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
 }
- 
+
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
 }
- 
+
 model User {
   id            String          @id @default(cuid())
   name          String?
@@ -14,11 +14,11 @@ model User {
   emailVerified DateTime?
   image         String?
   bio           String?
+  banner        String?
   accounts      Account[]
   sessions      Session[]
-  // Optional for WebAuthn support
   Authenticator Authenticator[]
- 
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   following    Follow[] @relation("following")
@@ -26,8 +26,12 @@ model User {
   posts        Post[]   @relation("posts")
   likes        Like[]
   reposts      Repost[]
+  comments     Comment[]
+  // [NY] Relasjoner for varsler
+  notificationsReceived Notification[] @relation("notificationRecipient")
+  notificationsSent     Notification[] @relation("notificationActor")
 }
- 
+
 model Account {
   id                String  @id @default(cuid())
   userId            String
@@ -37,40 +41,39 @@ model Account {
   refresh_token     String?
   access_token      String?
   expires_at        Int?
-  refresh_token_expires_in Int? //@db.Text
+  refresh_token_expires_in Int?
   token_type        String?
   scope             String?
   id_token          String?
   session_state     String?
- 
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
- 
+
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
- 
+
   @@unique([provider, providerAccountId])
 }
- 
+
 model Session {
   id           String   @id @default(cuid())
   sessionToken String   @unique
   userId       String
   expires      DateTime
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
- 
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
- 
+
 model VerificationToken {
   identifier String
   token      String
   expires    DateTime
- 
+
   @@unique([identifier, token])
 }
- 
-// Optional for WebAuthn support
+
 model Authenticator {
   credentialID         String  @unique
   userId               String
@@ -80,22 +83,40 @@ model Authenticator {
   credentialDeviceType String
   credentialBackedUp   Boolean
   transports           String?
- 
+
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
- 
+
   @@id([userId, credentialID])
 }
 
 model Post {
   id        String   @id @default(cuid())
   content   String
+  // [NY] Valgfritt bilde lagret som base64-streng
+  image     String?
   authorId  String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  author    User     @relation("posts", fields: [authorId], references: [id], onDelete: Cascade)
-  likes     Like[]
-  reposts   Repost[]
+  author        User           @relation("posts", fields: [authorId], references: [id], onDelete: Cascade)
+  likes         Like[]
+  reposts       Repost[]
+  comments      Comment[]
+  notifications Notification[]
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  content   String
+  postId    String
+  authorId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
 }
 
 model Like {
@@ -120,17 +141,37 @@ model Repost {
   @@unique([postId, userId])
 }
 
-// Followed and followers
 model Follow {
-  id         String   @id @default(cuid())
-  followedId String
+  id          String   @id @default(cuid())
+  followedId  String
   followingId String
- 
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
- 
+
   followed   User @relation("followed", fields: [followedId], references: [id], onDelete: Cascade)
   following  User @relation("following", fields: [followingId], references: [id], onDelete: Cascade)
 
   @@unique([followedId, followingId])
+}
+
+// [NY] Varsler: like, follow og reply-notifikasjoner
+model Notification {
+  id        String   @id @default(cuid())
+  // Mottaker av varselet
+  userId    String
+  // Den som utløste varselet
+  actorId   String
+  // Type: "LIKE" | "FOLLOW" | "REPLY"
+  type      String
+  // Relevant post (for LIKE og REPLY)
+  postId    String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user  User  @relation("notificationRecipient", fields: [userId], references: [id], onDelete: Cascade)
+  actor User  @relation("notificationActor", fields: [actorId], references: [id], onDelete: Cascade)
+  post  Post? @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
