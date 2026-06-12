@@ -53,7 +53,7 @@ export default function Navigation() {
 
             <Link href="/app/follows" className="flex items-center gap-3 text-lg font-semibold hover:bg-zinc-800 rounded-full px-4 py-3 transition-colors duration-200 w-fit">
                 <FiUserPlus className="w-7 h-7 flex-shrink-0"/>
-                <span>Follows</span>
+                <span>Follow</span>
             </Link>
 
             <Link href="/app/premium" className="flex items-center gap-3 text-lg font-semibold hover:bg-zinc-800 rounded-full px-4 py-3 transition-colors duration-200 w-fit">

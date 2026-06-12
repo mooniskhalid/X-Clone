@@ -10,7 +10,7 @@ export function RightSidebar() {
 
     const whoToFollow = useQuery({
         queryKey: ["whoToFollow"],
-        queryFn: api.getWhoToFollow,
+        queryFn: () => api.getWhoToFollow(3),
         staleTime: 5 * 60 * 1000,
     });
 

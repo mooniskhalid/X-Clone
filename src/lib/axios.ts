@@ -115,8 +115,9 @@ const api = {
         const { data } = await axios.get("/api/get-trending");
         return data as any[];
     },
-    getWhoToFollow: async () => {
-        const { data } = await axios.get("/api/get-who-to-follow");
+    getWhoToFollow: async (limit?: number) => {
+        const params = limit ? { limit } : {};
+        const { data } = await axios.get("/api/get-who-to-follow", { params });
         return data as any[];
     },
     // [NY] Søk
