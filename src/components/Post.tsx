@@ -62,32 +62,27 @@ export function timeAgo(dateStr: string) {
     return new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-// [NY] Hjelpefunksjon: oppdaterer poster i alle cache-former (infinite, paginert, enkelt)
-function mapPostsInCache(old: any, updater: (p: Post) => Post): any {
-    if (!old) return old;
-    if (old.pages) // infinite query: { pages: [{posts, nextCursor}] }
-        return { ...old, pages: old.pages.map((page: any) => ({ ...page, posts: page.posts.map(updater) })) };
-    if (old.posts) // paginert query: { posts, nextCursor }
-        return { ...old, posts: old.posts.map(updater) };
-    if (Array.isArray(old)) return old.map(updater);
-    if (typeof old === "object" && old.id) return updater(old as Post);
-    return old;
+function invalidateAllPostQueries(queryClient: any) {
+    ["posts", "post", "userPosts", "likedPosts", "mediaPosts"].forEach((key) =>
+        queryClient.invalidateQueries({ queryKey: [key] })
+    );
 }
 
-// [NY] Hjelpefunksjon: fjerner en post fra alle cache-former
-function filterPostFromCache(old: any, postId: string): any {
-    if (!old) return old;
-    if (old.pages)
-        return { ...old, pages: old.pages.map((page: any) => ({ ...page, posts: page.posts.filter((p: Post) => p.id !== postId) })) };
-    if (old.posts)
-        return { ...old, posts: old.posts.filter((p: Post) => p.id !== postId) };
-    if (Array.isArray(old)) return old.filter((p: Post) => p.id !== postId);
-    return old;
+// Oppdaterer en post i alle cache-former (infinite, liste, enkelt objekt)
+function updatePostInCache(queryClient: any, postId: string, updater: (p: Post) => Post) {
+    const keys = ["posts", "userPosts", "likedPosts", "mediaPosts"];
+    keys.forEach((key) => {
+        queryClient.setQueriesData({ queryKey: [key] }, (old: any) => {
+            if (!old) return old;
+            if (old.pages) return { ...old, pages: old.pages.map((page: any) => ({ ...page, posts: page.posts.map((p: Post) => p.id === postId ? updater(p) : p) })) };
+            if (old.posts) return { ...old, posts: old.posts.map((p: Post) => p.id === postId ? updater(p) : p) };
+            if (Array.isArray(old)) return old.map((p: Post) => p.id === postId ? updater(p) : p);
+            return old;
+        });
+    });
+    // Enkelt post-view
+    queryClient.setQueryData(["post", postId], (old: any) => old?.id === postId ? updater(old) : old);
 }
-
-// [NY] Deler cache-predikater for gjenbruk
-const postCachePredicate = (q: any) =>
-    ["posts", "post", "userPosts"].includes(q.queryKey[0] as string);
 
 // [ENDRET] disableClick-prop: når true, skrus navigasjon av (brukes på post-detaljsiden)
 export function PostCard({ post, disableClick }: { post: Post; disableClick?: boolean }) {
@@ -133,58 +128,45 @@ export function PostCard({ post, disableClick }: { post: Post; disableClick?: bo
         return () => document.removeEventListener("mousedown", handler);
     }, [showRepostMenu]);
 
-    // Like — optimistisk oppdatering
+    // Like — optimistisk: instant UI, sync ved suksess
     const likePost = useMutation({
         mutationFn: () => api.likePost(post.id),
-        onMutate: async () => {
-            await queryClient.cancelQueries({ predicate: postCachePredicate });
-            const prev = queryClient.getQueriesData({ predicate: postCachePredicate });
-            const toggle = (p: Post): Post =>
-                p.id === post.id ? { ...p, isLiked: !p.isLiked, likeCount: p.isLiked ? p.likeCount - 1 : p.likeCount + 1 } : p;
-            queryClient.setQueriesData({ predicate: postCachePredicate }, (old) => mapPostsInCache(old, toggle));
-            return { prev };
+        onMutate: () => {
+            updatePostInCache(queryClient, post.id, (p) => ({
+                ...p,
+                isLiked: !p.isLiked,
+                likeCount: p.isLiked ? p.likeCount - 1 : p.likeCount + 1,
+            }));
         },
-        onError: (_e, _v, ctx) => {
-            ctx?.prev?.forEach(([key, data]) => queryClient.setQueryData(key, data));
-        },
+        onError: () => invalidateAllPostQueries(queryClient), // rollback ved feil
+        onSuccess: () => invalidateAllPostQueries(queryClient), // sync med server
     });
 
-    // [NY] Repost — optimistisk oppdatering
+    // Repost — optimistisk: instant UI, sync ved suksess
     const repostPost = useMutation({
         mutationFn: () => api.repost(post.id),
-        onMutate: async () => {
-            await queryClient.cancelQueries({ predicate: postCachePredicate });
-            const prev = queryClient.getQueriesData({ predicate: postCachePredicate });
-            const toggle = (p: Post): Post =>
-                p.id === post.id ? { ...p, isReposted: !p.isReposted, repostCount: p.isReposted ? p.repostCount - 1 : p.repostCount + 1 } : p;
-            queryClient.setQueriesData({ predicate: postCachePredicate }, (old) => mapPostsInCache(old, toggle));
-            return { prev };
+        onMutate: () => {
+            updatePostInCache(queryClient, post.id, (p) => ({
+                ...p,
+                isReposted: !p.isReposted,
+                repostCount: p.isReposted ? p.repostCount - 1 : p.repostCount + 1,
+            }));
         },
-        onError: (_e, _v, ctx) => {
-            ctx?.prev?.forEach(([key, data]) => queryClient.setQueryData(key, data));
-        },
-        onSuccess: () => {
-            // [NY] Invalider feed så repost-item dukker opp / forsvinner med en gang
-            queryClient.invalidateQueries({ queryKey: ["posts"] });
-            queryClient.invalidateQueries({ queryKey: ["userPosts"] });
-        },
+        onError: () => invalidateAllPostQueries(queryClient),
+        onSuccess: () => invalidateAllPostQueries(queryClient),
     });
 
-    // Slett post
+    // [ENDRET] Slett post
     const deletePost = useMutation({
         mutationFn: () => api.deletePost(post.id),
-        onSuccess: () => {
-            queryClient.setQueriesData({ predicate: postCachePredicate }, (old) => filterPostFromCache(old, post.id));
-            queryClient.removeQueries({ queryKey: ["post", post.id] });
-        },
+        onSuccess: () => invalidateAllPostQueries(queryClient),
     });
 
-    // Rediger post
+    // [ENDRET] Rediger post
     const editPost = useMutation({
         mutationFn: () => api.editPost(post.id, editContent),
-        onSuccess: (updated: { id: string; content: string }) => {
-            const updateContent = (p: Post): Post => p.id === post.id ? { ...p, content: updated.content } : p;
-            queryClient.setQueriesData({ predicate: postCachePredicate }, (old) => mapPostsInCache(old, updateContent));
+        onSuccess: () => {
+            invalidateAllPostQueries(queryClient);
             setIsEditing(false);
         },
     });
@@ -350,5 +332,3 @@ export function PostCard({ post, disableClick }: { post: Post; disableClick?: bo
     );
 }
 
-// Eksporter hjelpefunksjonene for bruk i andre komponenter
-export { mapPostsInCache, filterPostFromCache, postCachePredicate };

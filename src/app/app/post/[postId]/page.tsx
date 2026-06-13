@@ -4,8 +4,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/axios";
 import { useParams, useRouter, redirect } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { FiArrowLeft, FiMoreHorizontal, FiImage, FiX } from "react-icons/fi";
-import { PostCard, timeAgo, type Post, type Comment, mapPostsInCache } from "@/components/Post";
+import { FiArrowLeft, FiMoreHorizontal } from "react-icons/fi";
+import { PostCard, timeAgo, type Post, type Comment } from "@/components/Post"; // [ENDRET]
 
 // [ENDRET] CommentItem: kun klikk på avatar/navn navigerer til profil (ikke hele kortet)
 function CommentItem({ comment, postId, currentUserId }: { comment: Comment; postId: string; currentUserId: string | undefined }) {
@@ -29,13 +29,10 @@ function CommentItem({ comment, postId, currentUserId }: { comment: Comment; pos
     const deleteComment = useMutation({
         mutationFn: () => api.deleteComment(comment.id),
         onSuccess: () => {
-            queryClient.setQueryData<Comment[]>(["comments", postId], (old) => old?.filter((c) => c.id !== comment.id));
-            queryClient.setQueriesData(
-                { predicate: (q) => ["posts", "post", "userPosts"].includes(q.queryKey[0] as string) },
-                (old) => mapPostsInCache(old, (p: Post) =>
-                    p.id === postId ? { ...p, commentCount: Math.max(0, p.commentCount - 1) } : p
-                )
-            );
+            queryClient.invalidateQueries({ queryKey: ["comments", postId] }); // [ENDRET]
+            queryClient.invalidateQueries({ queryKey: ["post", postId] });
+            queryClient.invalidateQueries({ queryKey: ["posts"] });
+            queryClient.invalidateQueries({ queryKey: ["userPosts"] });
         },
     });
 
@@ -127,17 +124,11 @@ export default function PostDetail() {
 
     const createComment = useMutation({
         mutationFn: () => api.createComment(postId, content),
-        onSuccess: (newComment: Comment) => {
-            queryClient.setQueryData<Comment[]>(["comments", postId], (old) => [...(old ?? []), newComment]);
-            queryClient.setQueryData<Post>(["post", postId], (old) =>
-                old ? { ...old, commentCount: old.commentCount + 1 } : old
-            );
-            queryClient.setQueriesData(
-                { predicate: (q) => q.queryKey[0] === "posts" },
-                (old) => mapPostsInCache(old, (p: Post) =>
-                    p.id === postId ? { ...p, commentCount: p.commentCount + 1 } : p
-                )
-            );
+        onSuccess: () => { // [ENDRET]
+            queryClient.invalidateQueries({ queryKey: ["comments", postId] });
+            queryClient.invalidateQueries({ queryKey: ["post", postId] });
+            queryClient.invalidateQueries({ queryKey: ["posts"] });
+            queryClient.invalidateQueries({ queryKey: ["userPosts"] });
             setContent("");
         },
     });

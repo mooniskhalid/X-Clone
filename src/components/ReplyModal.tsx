@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/axios";
 import { useEffect, useRef, useState } from "react";
 import { FiX } from "react-icons/fi";
-import { type Post, type Comment, timeAgo } from "@/components/Post";
+import { type Post, timeAgo } from "@/components/Post"; // [ENDRET] fjernet ubrukt Comment-import
 
 export function ReplyModal({ post, onClose }: { post: Post; onClose: () => void }) {
     const queryClient = useQueryClient();
@@ -28,8 +28,9 @@ export function ReplyModal({ post, onClose }: { post: Post; onClose: () => void 
 
     const createComment = useMutation({
         mutationFn: () => api.createComment(post.id, content),
-        onSuccess: (newComment: Comment) => {
-            queryClient.setQueryData<Comment[]>(["comments", post.id], (old) => [...(old ?? []), newComment]);
+        onSuccess: () => { // [ENDRET]
+            queryClient.invalidateQueries({ queryKey: ["comments", post.id] });
+            queryClient.invalidateQueries({ queryKey: ["post", post.id] });
             queryClient.invalidateQueries({ queryKey: ["posts"] });
             queryClient.invalidateQueries({ queryKey: ["userPosts"] });
             setContent("");
@@ -60,13 +61,12 @@ export function ReplyModal({ post, onClose }: { post: Post; onClose: () => void 
                     <div className="flex-1 min-w-0 pb-3">
                         <div className="flex items-center gap-1 flex-wrap">
                             <span className="font-bold text-white text-sm">{post.author.name ?? "Unknown"}</span>
-                            <span className="text-zinc-500 text-sm truncate">@{post.author.email?.toLowerCase().replace(/\s+/g, "") ?? "unknown"}</span>
                             <span className="text-zinc-500 text-sm">·</span>
                             <span className="text-zinc-500 text-sm flex-shrink-0">{timeAgo(post.createdAt)}</span>
                         </div>
                         <p className="text-white text-sm mt-0.5 whitespace-pre-wrap break-words leading-relaxed">{post.content}</p>
                         <p className="text-zinc-500 text-sm mt-3">
-                            Replying to <span className="text-sky-500">@{post.author.email?.toLowerCase().replace(/\s+/g, "") ?? "unknown"}</span>
+                            Replying to <span className="text-sky-500">{post.author.name ?? "Unknown"}</span>
                         </p>
                     </div>
                 </div>
