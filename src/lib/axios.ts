@@ -57,6 +57,7 @@ const api = {
         email?: string;
         image?: string;
         banner?: string;
+        showEmail?: boolean; // [NY]
     }) => {
         const { data: res } = await axios.patch("/api/update-profile", profileData);
         return res;
