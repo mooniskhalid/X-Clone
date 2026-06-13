@@ -12,7 +12,7 @@ export default function ExplorePage() {
     const searchParams = useSearchParams();
     const [query, setQuery] = useState(searchParams.get("q") ?? "");
     const [debouncedQuery, setDebouncedQuery] = useState(searchParams.get("q") ?? "");
-    const [activeTab, setActiveTab] = useState<"posts" | "people">("posts");
+    const [activeTab, setActiveTab] = useState<"posts" | "people">("people"); // [ENDRET]
 
     // Sync når URL-param endres (f.eks. fra SearchBar på andre sider)
     useEffect(() => {
@@ -55,20 +55,20 @@ export default function ExplorePage() {
                     )}
                 </div>
                 {debouncedQuery && (
-                    <div className="flex mt-2 -mx-4">
-                        <button
-                            onClick={() => setActiveTab("posts")}
-                            className={`flex-1 py-2.5 text-sm font-semibold relative transition ${activeTab === "posts" ? "text-white" : "text-zinc-500 hover:text-zinc-300"}`}
-                        >
-                            Posts
-                            {activeTab === "posts" && <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-12 h-0.5 bg-sky-500 rounded-full" />}
-                        </button>
+                    <div className="flex mt-2 -mx-4"> {/* [ENDRET] rekkefølge: People først */}
                         <button
                             onClick={() => setActiveTab("people")}
                             className={`flex-1 py-2.5 text-sm font-semibold relative transition ${activeTab === "people" ? "text-white" : "text-zinc-500 hover:text-zinc-300"}`}
                         >
                             People
                             {activeTab === "people" && <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-12 h-0.5 bg-sky-500 rounded-full" />}
+                        </button>
+                        <button
+                            onClick={() => setActiveTab("posts")}
+                            className={`flex-1 py-2.5 text-sm font-semibold relative transition ${activeTab === "posts" ? "text-white" : "text-zinc-500 hover:text-zinc-300"}`}
+                        >
+                            Posts
+                            {activeTab === "posts" && <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-12 h-0.5 bg-sky-500 rounded-full" />}
                         </button>
                     </div>
                 )}
