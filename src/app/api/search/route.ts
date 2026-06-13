@@ -29,12 +29,13 @@ export async function GET(request: NextRequest) {
         prisma.user.findMany({
             where: {
                 OR: [
-                    { name: { contains: q } },
-                    { email: { contains: q } },
+                    { name: { contains: q, mode: "insensitive" } }, // [ENDRET]
+                    // [ENDRET] Søk på email kun hvis brukeren har valgt å vise den
+                    { AND: [{ email: { contains: q, mode: "insensitive" } }, { showEmail: true }] },
                 ],
             },
             take: 10,
-            select: { id: true, name: true, email: true, image: true },
+            select: { id: true, name: true, image: true, showEmail: true, email: true },
         }),
     ]);
 
