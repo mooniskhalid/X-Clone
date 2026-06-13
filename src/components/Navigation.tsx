@@ -20,8 +20,9 @@ export default function Navigation() {
     const unreadCount = notifications.data?.unreadCount ?? 0;
 
     const [showCreateModal, setShowCreateModal] = useState(false);
+    const [showSignOutModal, setShowSignOutModal] = useState(false); // [NY]
 
-    const profileHref = user.isSuccess ? "/app/profile/" + user.data.id : "/app/profile";
+    const profileHref = user.data?.id ? "/app/profile/" + user.data.id : null;
 
     return (
         <>
@@ -51,7 +52,7 @@ export default function Navigation() {
                 <span>Notifications</span>
             </Link>
 
-            <Link href="/app/follows" className="flex items-center gap-3 text-lg font-semibold hover:bg-zinc-800 rounded-full px-4 py-3 transition-colors duration-200 w-fit">
+            <Link href="/app/follow" className="flex items-center gap-3 text-lg font-semibold hover:bg-zinc-800 rounded-full px-4 py-3 transition-colors duration-200 w-fit">
                 <FiUserPlus className="w-7 h-7 flex-shrink-0"/>
                 <span>Follow</span>
             </Link>
@@ -61,10 +62,12 @@ export default function Navigation() {
                 <span>Premium</span>
             </Link>
 
-            <Link href={profileHref} className="flex items-center gap-3 text-lg font-semibold hover:bg-zinc-800 rounded-full px-4 py-3 transition-colors duration-200 w-fit">
-                <FiUser className="w-7 h-7 flex-shrink-0" />
-                <span>Profile</span>
-            </Link>
+            {profileHref && (
+                <Link href={profileHref} className="flex items-center gap-3 text-lg font-semibold hover:bg-zinc-800 rounded-full px-4 py-3 transition-colors duration-200 w-fit">
+                    <FiUser className="w-7 h-7 flex-shrink-0" />
+                    <span>Profile</span>
+                </Link>
+            )}
 
             <button
                 onClick={() => setShowCreateModal(true)}
@@ -75,7 +78,7 @@ export default function Navigation() {
 
             <div className="mt-auto mb-6">
                 <button
-                    onClick={() => signOut({ callbackUrl: "/" })}
+                    onClick={() => setShowSignOutModal(true)} // [ENDRET]
                     className="bg-zinc-900 text-white font-bold py-1 px-[40px] rounded-full w-fit whitespace-nowrap hover:bg-sky-400 transition-colors duration-200"
                 >
                     Sign Out
@@ -91,6 +94,9 @@ export default function Navigation() {
             <Link href="/app/explore" className="p-2 rounded-full hover:bg-zinc-800 transition-colors">
                 <FiSearch className="w-6 h-6" />
             </Link>
+            <Link href="/app/follow" className="p-2 rounded-full hover:bg-zinc-800 transition-colors">
+                <FiUserPlus className="w-6 h-6"/>
+            </Link>
             <button
                 onClick={() => setShowCreateModal(true)}
                 className="bg-sky-500 hover:bg-sky-400 text-white font-bold w-10 h-10 rounded-full flex items-center justify-center text-xl transition-colors"
@@ -105,11 +111,13 @@ export default function Navigation() {
                     </span>
                 )}
             </Link>
-            <Link href={profileHref} className="p-2 rounded-full hover:bg-zinc-800 transition-colors">
-                <FiUser className="w-6 h-6" />
-            </Link>
+            {profileHref && (
+                <Link href={profileHref} className="p-2 rounded-full hover:bg-zinc-800 transition-colors">
+                    <FiUser className="w-6 h-6" />
+                </Link>
+            )}
             <button
-                onClick={() => signOut({ callbackUrl: "/" })}
+                onClick={() => setShowSignOutModal(true)} // [ENDRET]
                 className="p-2 rounded-full hover:bg-zinc-800 transition-colors"
             >
                 <FiLogOut className="w-6 h-6" />
@@ -117,6 +125,28 @@ export default function Navigation() {
         </nav>
 
         {showCreateModal && <CreatePostModal onClose={() => setShowCreateModal(false)} />}
+
+        {/* [NY] Sign out bekreftelsesmodal */}
+        {showSignOutModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setShowSignOutModal(false)}>
+                <div className="bg-black border border-zinc-700 rounded-2xl p-8 w-full max-w-xs flex flex-col gap-4" onClick={e => e.stopPropagation()}>
+                    <h2 className="text-white text-xl font-bold">Sign out of X?</h2>
+                    <p className="text-gray-400 text-sm">You can always sign back in.</p>
+                    <button
+                        onClick={() => signOut({ callbackUrl: "/" })}
+                        className="bg-white text-black font-bold rounded-full py-2 hover:bg-red-500 hover:text-white transition-colors duration-200"
+                    >
+                        Sign out
+                    </button>
+                    <button
+                        onClick={() => setShowSignOutModal(false)}
+                        className="border border-zinc-600 text-white font-bold rounded-full py-2 hover:bg-zinc-800 transition-colors duration-200"
+                    >
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        )}
         </>
     );
 }

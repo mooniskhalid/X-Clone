@@ -15,6 +15,8 @@ model User {
   image         String?
   bio           String?
   banner        String?
+  password      String?
+  showEmail     Boolean  @default(false) // [NY]
   accounts      Account[]
   sessions      Session[]
   Authenticator Authenticator[]

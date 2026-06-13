@@ -69,9 +69,6 @@ function CommentItem({ comment, postId, currentUserId }: { comment: Comment; pos
                         >
                             {comment.author.name ?? "Unknown"}
                         </span>
-                        <span className="text-zinc-500 text-sm truncate">
-                            @{comment.author.email?.toLowerCase().replace(/\s+/g, "") ?? "unknown"}
-                        </span>
                         <span className="text-zinc-500 text-sm">·</span>
                         <span className="text-zinc-500 text-sm flex-shrink-0">{timeAgo(comment.createdAt)}</span>
                     </div>

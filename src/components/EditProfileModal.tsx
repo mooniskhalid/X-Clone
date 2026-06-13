@@ -12,6 +12,7 @@ type UserData = {
     image: string | null;
     bio: string | null;
     banner: string | null;
+    showEmail: boolean; // [NY]
 };
 
 // [NY] Konverterer en File til base64 data-URL for lagring i SQLite
@@ -38,6 +39,7 @@ export function EditProfileModal({
     const [name, setName] = useState(user.name ?? "");
     const [bio, setBio] = useState(user.bio ?? "");
     const [email, setEmail] = useState(user.email ?? "");
+    const [showEmail, setShowEmail] = useState(user.showEmail); // [NY]
     const [image, setImage] = useState<string | null>(user.image);
     const [banner, setBanner] = useState<string | null>(user.banner ?? null);
     const [error, setError] = useState<string | null>(null);
@@ -57,6 +59,7 @@ export function EditProfileModal({
             name,
             bio,
             email,
+            showEmail, // [NY]
             image: image ?? undefined,
             banner: banner ?? undefined,
         }),
@@ -202,10 +205,24 @@ export function EditProfileModal({
                             onChange={(e) => setEmail(e.target.value)}
                             className="bg-transparent border border-zinc-700 rounded-md px-3 py-2 text-white text-sm outline-none focus:border-sky-500 transition"
                         />
-                        <span className="text-zinc-600 text-xs">
-                            NB: E-post brukes kun som visningsnavn — GitHub-innloggingen din påvirkes ikke.
-                        </span>
                     </label>
+
+                    {/* [NY] Toggle: vis e-post på profilen */}
+                    <div className="flex items-center justify-between py-1">
+                        <div>
+                            <p className="text-white text-sm font-medium">Show email on profile</p>
+                            <p className="text-zinc-500 text-xs">Other users can see your email address</p>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => setShowEmail(v => !v)}
+                            className={`relative w-11 h-6 rounded-full transition-colors duration-200 focus:outline-none ${showEmail ? "bg-sky-500" : "bg-zinc-700"}`}
+                        >
+                            <span
+                                className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${showEmail ? "translate-x-5" : "translate-x-0"}`}
+                            />
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

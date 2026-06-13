@@ -37,13 +37,18 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         }
     });
 
-    const { following, followed, ...userWithoutRelations } = user;
+    const { following, followed, password, ...userWithoutRelations } = user; // [ENDRET] aldri eksponer password
+
+    const isOwnProfile = requester.id === userId; // [NY]
 
     return NextResponse.json({
         ...userWithoutRelations,
+        // [NY] Skjul email for andre brukere med mindre de har valgt å vise den
+        email: isOwnProfile || user.showEmail ? userWithoutRelations.email : null,
         isFollowing: !!follow,
         followerCount: followed.length,
         followingCount: following.length,
+        isOwnProfile, // [NY] nyttig for frontend
     }, { status: 200 });
     
 }

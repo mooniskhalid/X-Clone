@@ -128,7 +128,10 @@ export default function Profile() {
             {/* Navn & handle */}
             <div className="px-4 mb-3">
                 <p className="font-bold text-xl">{user.data?.name ?? "—"}</p>
-                <p className="text-zinc-500 text-sm">@{user.data?.email?.toLowerCase().replace(/\s+/g, "") ?? "—"}</p>
+                {/* [ENDRET] Vis kun email hvis brukeren har valgt å vise den */}
+                {user.data?.email && (
+                    <p className="text-zinc-500 text-sm">{user.data.email}</p>
+                )}
             </div>
 
             {user.data?.bio && <div className="px-4 mb-3"><p className="text-zinc-300">{user.data.bio}</p></div>}
@@ -240,6 +243,7 @@ export default function Profile() {
                         image: user.data.image ?? null,
                         bio: user.data.bio ?? null,
                         banner: user.data.banner ?? null,
+                        showEmail: user.data.showEmail ?? false, // [NY]
                     }}
                     onClose={() => {
                         setShowEditModal(false);

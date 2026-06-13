@@ -3,6 +3,7 @@ import { signIn, useSession } from "next-auth/react";
 import { FaGithub } from "react-icons/fa";
 import { FaXTwitter, FaTwitter } from "react-icons/fa6";
 import { redirect } from "next/navigation";
+import Link from "next/link"; // [NY]
 
 export default function Home() {
     const { data: session } = useSession();
@@ -40,6 +41,14 @@ export default function Home() {
                         <div className="flex-1 h-px bg-gray-700" />
                     </div>
 
+                    {/* [NY] Link til registrering med e-post */}
+                    <Link
+                        href="/register"
+                        className="flex items-center justify-center bg-sky-500 text-white font-semibold rounded-full py-2 px-6 hover:bg-sky-400 transition-colors duration-200 w-full text-center"
+                    >
+                        Create account
+                    </Link>
+
                     <p className="text-gray-500 text-xs mt-2">
                         By signing up, you agree to the{" "}
                         <button className="text-blue-400 hover:underline cursor-pointer">Terms of Service</button>{" "}
@@ -49,12 +58,13 @@ export default function Home() {
 
                     <div className="mt-6">
                         <p className="text-white font-bold mb-3">Already have an account?</p>
-                        <button
-                            onClick={() => signIn("github")}
-                            className="w-full border border-gray-600 text-white font-semibold rounded-full py-3 px-6 hover:bg-sky-400 transition-colors duration-200"
+                        {/* [ENDRET] Peker nå til /login i stedet for GitHub signIn */}
+                        <Link
+                            href="/login"
+                            className="block w-full border border-gray-600 text-white font-semibold rounded-full py-3 px-6 hover:bg-sky-400 transition-colors duration-200 text-center"
                         >
                             Sign in
-                        </button>
+                        </Link>
                     </div>
                 </div>
             </div>

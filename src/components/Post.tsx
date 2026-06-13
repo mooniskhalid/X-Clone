@@ -199,7 +199,7 @@ export function PostCard({ post, disableClick }: { post: Post; disableClick?: bo
             {post.repostedBy && (
                 <div className="flex items-center gap-1.5 px-4 pt-2 text-zinc-500 text-xs" onClick={(e) => { e.stopPropagation(); router.push(`/app/profile/${post.repostedBy!.id}`); }}>
                     <FaRetweet className="w-3.5 h-3.5" />
-                    <span className="hover:underline cursor-pointer font-medium">{post.repostedBy.name ?? post.repostedBy.email ?? "Someone"} reposted</span>
+                    <span className="hover:underline cursor-pointer font-medium">{post.repostedBy.name ?? "Someone"} reposted</span>
                 </div>
             )}
             <div className="flex gap-3 px-4 py-3">
@@ -220,9 +220,6 @@ export function PostCard({ post, disableClick }: { post: Post; disableClick?: bo
                             onClick={(e) => { e.stopPropagation(); router.push(`/app/profile/${post.author.id}`); }}
                         >
                             {post.author.name ?? "Unknown"}
-                        </span>
-                        <span className="text-zinc-500 text-sm truncate">
-                            @{post.author.email?.toLowerCase().replace(/\s+/g, "") ?? "unknown"}
                         </span>
                         <span className="text-zinc-500 text-sm">·</span>
                         <span className="text-zinc-500 text-sm flex-shrink-0">{timeAgo(post.createdAt)}</span>
@@ -283,7 +280,6 @@ export function PostCard({ post, disableClick }: { post: Post; disableClick?: bo
                                 {post.quotedPost.author.image && <img src={post.quotedPost.author.image} alt="" className="w-full h-full object-cover" />}
                             </div>
                             <span className="font-bold text-white text-xs">{post.quotedPost.author.name ?? "Unknown"}</span>
-                            <span className="text-zinc-500 text-xs">@{post.quotedPost.author.email?.toLowerCase().replace(/\s+/g, "") ?? "unknown"}</span>
                         </div>
                         <p className="text-white text-sm leading-relaxed line-clamp-3">{post.quotedPost.content}</p>
                         {post.quotedPost.image && (

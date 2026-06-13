@@ -13,7 +13,7 @@ export async function PATCH(request: NextRequest) {
     if (!requester) return NextResponse.json({ error: "User not found" }, { status: 401 });
 
     const body = await request.json();
-    const { name, bio, email, image, banner } = body;
+    const { name, bio, email, image, banner, showEmail } = body; // [ENDRET]
 
     if (image && image.length > MAX_IMAGE_SIZE) {
         return NextResponse.json({ error: "Profile image is too large (max ~1.5 MB)" }, { status: 400 });
@@ -41,6 +41,7 @@ export async function PATCH(request: NextRequest) {
             ...(trimmedEmail !== undefined && { email: trimmedEmail }),
             ...(image !== undefined && { image }),
             ...(banner !== undefined && { banner }),
+            ...(showEmail !== undefined && { showEmail: !!showEmail }), // [NY]
         },
     });
 

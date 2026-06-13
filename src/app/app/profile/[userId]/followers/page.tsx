@@ -58,9 +58,6 @@ export default function FollowersPage() {
                     </div>
                     <div className="min-w-0">
                         <p className="font-bold text-white text-sm">{user.name ?? "Unknown"}</p>
-                        <p className="text-zinc-500 text-sm truncate">
-                            @{user.email?.toLowerCase().replace(/\s+/g, "") ?? "unknown"}
-                        </p>
                     </div>
                 </Link>
             ))}

@@ -53,9 +53,6 @@ export default function FollowPage() {
 
                         <Link href={`/app/profile/${user.id}`} className="flex-1 min-w-0">
                             <p className="font-bold text-white truncate">{user.name ?? "Unknown"}</p>
-                            <p className="text-zinc-500 text-sm truncate">
-                                @{user.email?.toLowerCase().replace(/\s+/g, "") ?? "unknown"}
-                            </p>
                             {user.followerCount > 0 && (
                                 <p className="text-zinc-500 text-xs mt-0.5">
                                     {user.followerCount.toLocaleString()} followers
